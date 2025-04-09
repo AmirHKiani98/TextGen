@@ -7,7 +7,7 @@ import numpy as np
 IMAGE_DEBUG = True
 class ImageHandler(object):
 
-    def __init__(self, image_path=None, image: np.ndarray = None, text_area:np.ndarray=None, text_area_func=None):
+    def __init__(self, image_path=None, image: np.ndarray = None, text_area:np.ndarray=None, text_area_func=None, text_area_func_args=None):
         """
         Initializes the image handler with an image or image path and optional text area information.
         Args:
@@ -34,17 +34,21 @@ class ImageHandler(object):
         else:
             raise ValueError("Either image_path or image must be provided.")
 
+        self.text_area_func_args = text_area_func_args if text_area_func_args is not None else {}
+        
         if text_area is not None:
             self.text_area = text_area
         elif text_area_func is not None:
             if not callable(text_area_func):
                 raise ValueError("text_area_func must be a callable function.")
             
-            self.text_area = text_area_func(self.image)
+            self.text_area = text_area_func(self.image, **self.text_area_func_args)
             if not isinstance(self.text_area, np.ndarray):
                 raise ValueError("text_area_func must return a np.array of coordinates. Returned: {}".format(type(self.text_area)))
             elif self.text_area.shape[1] != 4:
                 raise ValueError("Number of columns should be 4, showing the coordinates of the text area.") #TODO you can make this more general instead of having the user input only 4 coordinates
+        
+        
         if IMAGE_DEBUG:
             print("Image loaded successfully.")
         
@@ -87,50 +91,23 @@ class ImageHandler(object):
 
 if __name__ == "__main__":
     image_path = "test/images/pexels-karolina-grabowska-4032977.jpg"
-    def find_white_regions(img, debug=False):
+    def find_white_regions(img, white_threshold=200, top_n=5, area_threshold=0, debug=True):
         # Convert to HSV for better color filtering
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        _, mask = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+        _, mask = cv2.threshold(gray, white_threshold, 255, cv2.THRESH_BINARY)
         # Morphological cleanup
-        # kernel = np.ones((5, 5), np.uint8)
-        # mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        kernel = np.ones((5, 5), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         # Find contours in the white mask
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
 
         contours_sorted = sorted(contours, key=cv2.contourArea, reverse=True)
         
-        contours_5_largest = contours_sorted[:5]
+        contours_5_largest = contours_sorted[:top_n]
 
         white_regions = [(x, y, w, h) for cnt in contours_5_largest for x, y, w, h in [cv2.boundingRect(cnt)]]
-        
-        
-
-        
-            
-        # # Define white in HSV
-        # lower_white = np.array([0, 0, 200], dtype=np.uint8)
-        # upper_white = np.array([180, 50, 255], dtype=np.uint8)
-
-        # # Create a mask of white areas
-        # mask = cv2.inRange(hsv, lower_white, upper_white)
-
-        # # Morphological cleanup
-        # kernel = np.ones((5, 5), np.uint8)
-        # mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-
-        # # Find contours in the white mask
-        # contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # white_regions = []
-        # for cnt in contours:
-        #     area = cv2.contourArea(cnt)
-        #     if area > 500:  # ignore small blobs
-        #         x, y, w, h = cv2.boundingRect(cnt)
-        #         white_regions.append((x, y, w, h))
-        #         if debug:
-        #             cv2.rectangle(img, (x, y), (x+w, y+h), (0, 0, 255), 2)
 
         if debug:
             cv2.imshow("White Regions", img)
@@ -139,7 +116,7 @@ if __name__ == "__main__":
             cv2.destroyAllWindows()
 
         return np.array(white_regions)
-    image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions)
+    image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"threshold": 200, "top_n": 5})
 
     for x, y, w, h in image_obj.text_area:
         # Plot the rectangles on the image
