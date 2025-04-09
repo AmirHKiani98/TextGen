@@ -26,5 +26,5 @@ class TextGen():
         """
         from datasets import load_dataset
         self.text_database = load_dataset(text_database_hf)
-        pass
+        
 
