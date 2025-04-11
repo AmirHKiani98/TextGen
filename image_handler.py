@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
         return np.array(white_regions)
     image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"threshold": 200, "top_n": 5})
-
+    
     for x, y, w, h in image_obj.text_area:
         # Plot the rectangles on the image
         cv2.rectangle(image_obj.image, (x, y), (x + w, y + h), (0, 255, 0), 2)
