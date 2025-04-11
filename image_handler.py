@@ -115,7 +115,6 @@ class ImageHandler(object):
                 (word_width, word_height), baseline = cv2.getTextSize(word, font, font_scale, thickness)
 
                 
-
                 word_y = y + (h + word_height) // 2
                 cv2.putText(image_copy, word, (current_x, word_y), font, font_scale, (0, 0, 0), thickness, cv2.LINE_AA)
                 cv2.rectangle(image_copy, (current_x, y), (current_x + word_width, y + h), (0, 0, 255), 1)
