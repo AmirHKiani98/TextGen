@@ -4,9 +4,8 @@ import pandas as pd
 import numpy as np
 
 class TextHandler():
-
-    def __init__(self, hf_dataset="Maximax67/English-Valid-Words", version="0.1.0"):
-        self.hf_dataset = load_dataset(hf_dataset)
+    def __init__(self, hf_dataset="Maximax67/English-Valid-Words", config_name="sorted_by_frequency", version="0.1.0"):
+        self.hf_dataset = load_dataset(hf_dataset, config_name)
         
         if version == "0.1.0":
             self.load_df_english_valid_words()
@@ -16,11 +15,11 @@ class TextHandler():
         """
         Load the text database.
         """
-        self.text_database = load_dataset(self.hf_dataset)
-        self.df = pd.DataFrame(self.text_database['train'])
+        # Use the already loaded dataset from self.hf_dataset
+        self.df = pd.DataFrame(self.hf_dataset['train'])
         self.df = self.df.drop(columns=['Stem', 'Stem valid probability'])
         summation = self.df["Frequency count"].sum()
-        self.df["possiblity"] = self.df["Frequency count"].apply(lambda x: x/summation)
+        self.df["possiblity"] = self.df["Frequency count"].apply(lambda x: x / summation)
 
             
     def get_text(self, number_of_words=1):

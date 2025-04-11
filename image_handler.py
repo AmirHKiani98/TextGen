@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 
-IMAGE_DEBUG = True
+IMAGE_DEBUG = False
 class ImageHandler(object):
 
     def __init__(self, image_path=None, image: np.ndarray = None, text_area:np.ndarray=None, text_area_func=None, text_area_func_args=None):
@@ -58,9 +58,10 @@ class ImageHandler(object):
         return self.text_area.shape[0]
     
     def set_texts(self, texts: list):
+        
         if len(texts) != self.get_num_boxes():
             raise ValueError("Number of texts must match the number of detected text areas.")
-        self.texts = texts
+        self.texts = np.array(texts)
         # TODO check the length of each text
 
 
@@ -86,23 +87,43 @@ class ImageHandler(object):
     def set_text_area_function(self, func):
         self.text_area_func = func
 
-    def add_text_to_regions(self):
-        """
-        Add text to the detected regions in the image.
-        """
+    def add_text_to_regions_with_word_boxes(self):
         if not hasattr(self, 'texts') or not isinstance(self.texts, np.ndarray):
             raise ValueError("Texts must be a numpy array, set before adding them to the image.")
         
         if self.texts.shape[0] != self.text_area.shape[0]:
             raise ValueError("Number of text regions must match the number of detected text areas.")
-        # Copy of the image
+
         image_copy = self.image.copy()
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        thickness = 1
+
         for i, box in enumerate(self.text_area):
             x, y, w, h = box
-            cv2.putText(image_copy, self.texts[i], (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-            cv2.rectangle(image_copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        
+            text = self.texts[i]
+            words = text.split()
+
+            # Fit font scale so the tallest word fits vertically
+            font_scale = 10
+            # while max_word_height > h and font_scale > 0.1:
+            #     font_scale -= 0.1
+            #     max_word_height = max([cv2.getTextSize(word, font, font_scale, thickness)[0][1] for word in words])
+
+            # Draw words side by side within the box
+            current_x = x
+            for word in words:
+                (word_width, word_height), baseline = cv2.getTextSize(word, font, font_scale, thickness)
+
+                
+
+                word_y = y + (h + word_height) // 2
+                cv2.putText(image_copy, word, (current_x, word_y), font, font_scale, (0, 0, 0), thickness, cv2.LINE_AA)
+                cv2.rectangle(image_copy, (current_x, y), (current_x + word_width, y + h), (0, 0, 255), 1)
+
+                current_x += word_width + 5  # Small space between words
+
         return image_copy
+
         
     def add_curve(self, image):
         pass
@@ -112,7 +133,7 @@ class ImageHandler(object):
 
 if __name__ == "__main__":
     image_path = "test/images/pexels-karolina-grabowska-4032977.jpg"
-    def find_white_regions(img, white_threshold=200, top_n=5, area_threshold=0, debug=True):
+    def find_white_regions(img, white_threshold=200, top_n=5, area_threshold=0, debug=False):
         # Convert to HSV for better color filtering
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -137,11 +158,19 @@ if __name__ == "__main__":
             cv2.destroyAllWindows()
 
         return np.array(white_regions)
-    image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"threshold": 200, "top_n": 5})
-    
-    for x, y, w, h in image_obj.text_area:
-        # Plot the rectangles on the image
-        cv2.rectangle(image_obj.image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-    cv2.imshow("Detected Text Areas", image_obj.image)
+    image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 5})
+    from text_handler import TextHandler
+    text_obj = TextHandler()
+    num_boxes = image_obj.get_num_boxes()
+    texts = text_obj.generate_text_list(num_boxes, upper_bound_words=10)
+    image_obj.set_texts(texts)
+    image_with_text = image_obj.add_text_to_regions_with_word_boxes()
+    cv2.imshow("Image with Text", image_with_text)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    # for x, y, w, h in image_obj.text_area:
+    #     # Plot the rectangles on the image
+    #     cv2.rectangle(image_obj.image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    # cv2.imshow("Detected Text Areas", image_obj.image)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
