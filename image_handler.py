@@ -49,24 +49,33 @@ class ImageHandler(object):
                 raise ValueError("Number of columns should be 4, showing the coordinates of the text area.") #TODO you can make this more general instead of having the user input only 4 coordinates
         
         
+        
         if IMAGE_DEBUG:
             print("Image loaded successfully.")
         
         
+    def get_num_boxes(self):
+        return self.text_area.shape[0]
     
+    def set_texts(self, texts: list):
+        if len(texts) != self.get_num_boxes():
+            raise ValueError("Number of texts must match the number of detected text areas.")
+        self.texts = texts
+        # TODO check the length of each text
+
 
     def _load_image(self, path=None):
         if path is None:
             path = self.image_path
         return cv2.imread(path)
 
-    def to_grayscale(self, img):
+    def _to_grayscale(self, img):
         return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    def remove_noise(self, img):
+    def _remove_noise(self, img):
         return cv2.medianBlur(img, 3)
 
-    def threshold(self, img):
+    def _threshold(self, img):
         return cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                      cv2.THRESH_BINARY, 11, 2)
 
@@ -76,17 +85,21 @@ class ImageHandler(object):
     def set_text_area_function(self, func):
         self.text_area_func = func
 
-    def add_text_to_regions(self, text: np.ndarray):
+    def add_text_to_regions(self):
         """
         Add text to the detected regions in the image.
         """
-        if text.shape[0] != self.text_area.shape[0]:
+        if not isinstance(self, np.ndarray):
+
+        if self.texts.shape[0] != self.text_area.shape[0]:
             raise ValueError("Number of text regions must match the number of detected text areas.")
         
         for i, box in enumerate(self.text_area):
             x, y, w, h = box
             cv2.putText(self.image, text[i], (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.rectangle(self.image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    
+
         
 
 if __name__ == "__main__":
