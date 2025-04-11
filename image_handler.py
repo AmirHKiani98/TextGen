@@ -64,6 +64,7 @@ class ImageHandler(object):
         # TODO check the length of each text
 
 
+
     def _load_image(self, path=None):
         if path is None:
             path = self.image_path
@@ -89,8 +90,9 @@ class ImageHandler(object):
         """
         Add text to the detected regions in the image.
         """
-        if not isinstance(self, np.ndarray):
-
+        if not hasattr(self, 'texts') or not isinstance(self.texts, np.ndarray):
+            raise ValueError("Texts must be a numpy array, set before adding them to the image.")
+        
         if self.texts.shape[0] != self.text_area.shape[0]:
             raise ValueError("Number of text regions must match the number of detected text areas.")
         
