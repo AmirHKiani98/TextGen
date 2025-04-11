@@ -68,7 +68,7 @@ class ImageHandler(object):
     def _load_image(self, path=None):
         if path is None:
             path = self.image_path
-    return cv2.imread(path)
+        return cv2.imread(path)
 
     def _to_grayscale(self, img):
         return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
