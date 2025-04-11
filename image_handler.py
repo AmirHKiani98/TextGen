@@ -5,6 +5,7 @@ import numpy as np
 
 
 IMAGE_DEBUG = False
+np.random.seed(42)
 class ImageHandler(object):
 
     def __init__(self, image_path=None, image: np.ndarray = None, text_area:np.ndarray=None, text_area_func=None, text_area_func_args=None):
@@ -90,39 +91,60 @@ class ImageHandler(object):
     def add_text_to_regions_with_word_boxes(self):
         if not hasattr(self, 'texts') or not isinstance(self.texts, np.ndarray):
             raise ValueError("Texts must be a numpy array, set before adding them to the image.")
-        
+
         if self.texts.shape[0] != self.text_area.shape[0]:
             raise ValueError("Number of text regions must match the number of detected text areas.")
 
         image_copy = self.image.copy()
         font = cv2.FONT_HERSHEY_SIMPLEX
-        thickness = np.random.randint(2,10)
+        thickness = 2
+        space = 10
 
         for i, box in enumerate(self.text_area):
             x, y, w, h = box
-            random_x = np.random.randint(x, x + w)
-            random_y = np.random.randint(y, y + h)
-            
-
             text = self.texts[i]
             words = text.split()
 
-            # Fit font scale so the tallest word fits vertically
-            font_scale = 10
-            current_x = x
-            space = np.random.randint(20, 40)
-            
-            for word in words:
-                (word_width, word_height), baseline = cv2.getTextSize(word, font, font_scale, thickness)
-                top_left_y = random_y - word_height
-                
-                word_y = y + (h + word_height) // 2
-                cv2.putText(image_copy, word, (current_x, word_y), font, font_scale, (0, 0, 0), thickness, cv2.LINE_AA)
-                cv2.rectangle(image_copy, (current_x, y), (current_x + word_width, y + h), (0, 0, 255), 1)
+            # Draw the bounding box with a green line
+            cv2.rectangle(image_copy, (x, y), (x + w, y + h), (0, 255, 0), 12)
 
-                current_x += word_width + 5  # Small space between words
+            # Try to find the largest font scale that allows at least one line to fit
+            best_scale = None
+            for scale in np.linspace(0.1, 5.0, num=100)[::-1]:
+                _, word_height = cv2.getTextSize("Test", font, scale, thickness)[0]
+                num_lines_possible = h // (word_height + 5)
+                if num_lines_possible > 0:
+                    best_scale = scale
+                    break
+
+            if best_scale is None:
+                print(f"Warning: Couldn't fit text in box {box}")
+                continue
+
+            current_x = x
+            current_y = y + int(best_scale * 20)  # start a bit below top
+            line_height = cv2.getTextSize("Test", font, best_scale, thickness)[0][1] + 5  # text height + margin
+
+            for word in words:
+                (word_width, word_height), baseline = cv2.getTextSize(word, font, best_scale, thickness)
+
+                if current_x + word_width > x + w:
+                    # Go to next line
+                    current_x = x
+                    current_y += line_height
+
+                    if current_y + word_height > y + h:
+                        break  # no more space in box
+
+                cv2.putText(image_copy, word, (current_x, current_y), font, best_scale, (0, 0, 0), thickness, cv2.LINE_AA)
+                
+                cv2.rectangle(image_copy, (current_x, current_y - word_height),
+                            (current_x + word_width, current_y + baseline), (0, 0, 255), 1)
+
+                current_x += word_width + space
 
         return image_copy
+
 
         
     def add_curve(self, image):
