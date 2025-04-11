@@ -95,11 +95,17 @@ class ImageHandler(object):
         
         if self.texts.shape[0] != self.text_area.shape[0]:
             raise ValueError("Number of text regions must match the number of detected text areas.")
-        
+        # Copy of the image
+        image_copy = self.image.copy()
         for i, box in enumerate(self.text_area):
             x, y, w, h = box
-            cv2.putText(self.image, text[i], (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-            cv2.rectangle(self.image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(image_copy, text[i], (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.rectangle(image_copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        
+        return image_copy
+        
+    def add_curve(self, image):
+        
     
 
         
