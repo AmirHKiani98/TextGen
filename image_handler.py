@@ -58,23 +58,7 @@ class ImageHandler(object):
     def _load_image(self, path=None):
         if path is None:
             path = self.image_path
-        return cv2.imread(path)
-
-    def to_grayscale(self, img):
-        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    def remove_noise(self, img):
-        return cv2.medianBlur(img, 3)
-
-    def threshold(self, img):
-        return cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                     cv2.THRESH_BINARY, 11, 2)
-
-    def set_text_area_manually(self, text_area: list):
-        self.text_area = text_area
-    
-    def set_text_area_function(self, func):
-        self.text_area_func = func
+    return cv2.imread(path)
 
     def add_text_to_regions(self, text: np.ndarray):
         """
