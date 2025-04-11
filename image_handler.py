@@ -96,24 +96,25 @@ class ImageHandler(object):
 
         image_copy = self.image.copy()
         font = cv2.FONT_HERSHEY_SIMPLEX
-        thickness = 1
+        thickness = np.random.randint(2,10)
 
         for i, box in enumerate(self.text_area):
             x, y, w, h = box
+            random_x = np.random.randint(x, x + w)
+            random_y = np.random.randint(y, y + h)
+            
+
             text = self.texts[i]
             words = text.split()
 
             # Fit font scale so the tallest word fits vertically
             font_scale = 10
-            # while max_word_height > h and font_scale > 0.1:
-            #     font_scale -= 0.1
-            #     max_word_height = max([cv2.getTextSize(word, font, font_scale, thickness)[0][1] for word in words])
-
-            # Draw words side by side within the box
             current_x = x
+            space = np.random.randint(20, 40)
+            
             for word in words:
                 (word_width, word_height), baseline = cv2.getTextSize(word, font, font_scale, thickness)
-
+                top_left_y = random_y - word_height
                 
                 word_y = y + (h + word_height) // 2
                 cv2.putText(image_copy, word, (current_x, word_y), font, font_scale, (0, 0, 0), thickness, cv2.LINE_AA)
