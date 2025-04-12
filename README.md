@@ -13,18 +13,13 @@ TextGen is a Python library designed to simplify the process of adding text to i
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/TextGen.git
+   git clone https://github.com/AmirHKiani98/TextGen.git
    cd TextGen
    ```
 
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
-   ```
-
-3. Ensure you have the required libraries installed:
-   ```bash
-   pip install pillow opencv-python datasets
    ```
 
 ## Usage
