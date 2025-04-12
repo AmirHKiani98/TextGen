@@ -89,34 +89,33 @@ class ImageHandler(object):
     def set_text_area_function(self, func):
         self.text_area_func = func
     
-    def keep_bigger_intersected_text_area(self):
+    def fine_intersected_areas(self):
         """
-        From those text areas that are intersected with each other, keep the biggest one.
+        This function finds the intersected areas of the text boxes.
+        It assumes that the text_area is a list of rectangles defined by (x, y, w, h).
         """
         if not hasattr(self, 'text_area'):
-            raise ValueError("Text area has not been set. Please set it before calling this method.")
-        
-        if self.text_area.shape[0] == 0:
-            return np.array([])
+            raise ValueError("Text area not set. Please set it before finding intersected areas.")
 
-        kept_text_areas = []
-        for i in range(self.text_area.shape[0]):
-            x1, y1, w1, h1 = self.text_area[i]
-            area1 = w1 * h1
-            for j in range(i + 1, self.text_area.shape[0]):
-                x2, y2, w2, h2 = self.text_area[j]
-                area2 = w2 * h2
-                if (x1 < x2 + w2 and x1 + w1 > x2 and y1 < y2 + h2 and y1 + h1 > y2):
-                    # They intersect
-                    if area1 >= area2:
-                        kept_text_areas.append(self.text_area[i])
-                    else:
-                        kept_text_areas.append(self.text_area[j])
-                    break
-            else:
-                kept_text_areas.append(self.text_area[i])
+        intersected_areas = []
+        for i in range(len(self.text_area)):
+            for j in range(i + 1, len(self.text_area)):
+                box1 = self.text_area[i]
+                box2 = self.text_area[j]
 
-        return np.array(kept_text_areas)
+                # Calculate intersection
+                x1 = max(box1[0], box2[0])
+                y1 = max(box1[1], box2[1])
+                x2 = min(box1[0] + box1[2], box2[0] + box2[2])
+                y2 = min(box1[1] + box1[3], box2[1] + box2[3])
+
+                if x1 < x2 and y1 < y2:
+                    # Intersection exists
+                    intersected_area = (box1, box2)
+                    intersected_areas.append(intersected_area)
+                
+        return intersected_areas
+    
 
 
     def add_text_to_regions_with_word_boxes(self):
@@ -147,6 +146,7 @@ class ImageHandler(object):
                 if num_lines_possible > 0:
                     best_scale = scale
                     break
+            
 
             if best_scale is None:
                 print(f"Warning: Couldn't fit text in box {box}")
@@ -218,6 +218,7 @@ if __name__ == "__main__":
     texts = text_obj.generate_text_list(num_boxes, upper_bound_words=10)
     image_obj.set_texts(texts)
     image_with_text = image_obj.add_text_to_regions_with_word_boxes()
+    print(image_obj.fine_intersected_areas())
     cv2.imshow("Image with Text", image_with_text)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
