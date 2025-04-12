@@ -44,7 +44,6 @@ class ImageHandler(object):
                 raise ValueError("text_area_func must be a callable function.")
             
             self.text_area = text_area_func(self.image, **self.text_area_func_args)
-            self.text_area = self.keep_bigger_intersected_text_area()
             if not isinstance(self.text_area, np.ndarray):
                 raise ValueError("text_area_func must return a np.array of coordinates. Returned: {}".format(type(self.text_area)))
             elif self.text_area.shape[1] != 4:
@@ -116,7 +115,33 @@ class ImageHandler(object):
                 
         return intersected_areas
     
+    def keep_the_bigger_intersected_area(self):
+        """
+        This function keeps the biggest intersected area from the text boxes.
+        It assumes that the text_area is a list of rectangles defined by (x, y, w, h).
+        """
+        if not hasattr(self, 'text_area'):
+            raise ValueError("Text area not set. Please set it before finding intersected areas.")
 
+        intersected_areas = self.fine_intersected_areas()
+        
+        if not intersected_areas:
+            return self.text_area
+        to_remove = set()
+        for i in range(len(intersected_areas)):
+            box1, box2 = intersected_areas[i]
+            area1 = box1[2] * box1[3]
+            area2 = box2[2] * box2[3]
+
+            if area1 < area2:
+                smaller_area = tuple(box1)
+            else:
+                smaller_area = tuple(box2)
+        
+            to_remove.add(smaller_area)
+
+        # Remove smaller areas from self.text_area
+        self.text_area = np.array([box for box in self.text_area if tuple(box) not in to_remove])
 
     def add_text_to_regions_with_word_boxes(self):
         if not hasattr(self, 'texts') or not isinstance(self.texts, np.ndarray):
@@ -157,8 +182,9 @@ class ImageHandler(object):
             line_height = cv2.getTextSize("Test", font, best_scale, thickness)[0][1] + 5  # text height + margin
 
             for word in words:
-                (word_width, word_height), baseline = cv2.getTextSize(word, font, best_scale, thickness)
-
+                (word_width, word_height) = cv2.getTextSize(word, font, best_scale, thickness)[0]
+                top_left = (current_x, current_y - word_height)
+                bottom_right = (current_x + word_width, current_y)
                 if current_x + word_width > x + w:
                     # Go to next line
                     current_x = x
@@ -167,10 +193,11 @@ class ImageHandler(object):
                     if current_y + word_height > y + h:
                         break  # no more space in box
 
-                cv2.putText(image_copy, word, (current_x, current_y), font, best_scale, (0, 0, 0), thickness, cv2.LINE_AA)
+                cv2.putText(image_copy, word, (current_x, current_y),
+                            font, best_scale, (0, 0, 0), thickness, cv2.LINE_AA)
                 
-                cv2.rectangle(image_copy, (current_x, current_y - word_height),
-                            (current_x + word_width, current_y + baseline), (0, 0, 255), 1)
+                cv2.rectangle(image_copy, top_left, bottom_right
+                            , (0, 0, 255), 1)
 
                 current_x += word_width + space
 
@@ -212,13 +239,14 @@ if __name__ == "__main__":
 
         return np.array(white_regions)
     image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 5})
+    image_obj.keep_the_bigger_intersected_area()
     from text_handler import TextHandler
     text_obj = TextHandler()
     num_boxes = image_obj.get_num_boxes()
+
     texts = text_obj.generate_text_list(num_boxes, upper_bound_words=10)
     image_obj.set_texts(texts)
     image_with_text = image_obj.add_text_to_regions_with_word_boxes()
-    print(image_obj.fine_intersected_areas())
     cv2.imshow("Image with Text", image_with_text)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
