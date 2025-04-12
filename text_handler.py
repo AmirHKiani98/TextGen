@@ -49,7 +49,3 @@ class TextHandler():
             number_of_words = np.random.randint(1, upper_bound_words)
             texts.append(self.get_text(number_of_words))
         return texts
-    
-
-
-    
