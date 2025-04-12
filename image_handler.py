@@ -44,6 +44,7 @@ class ImageHandler(object):
                 raise ValueError("text_area_func must be a callable function.")
             
             self.text_area = text_area_func(self.image, **self.text_area_func_args)
+            self.text_area = self.keep_bigger_intersected_text_area()
             if not isinstance(self.text_area, np.ndarray):
                 raise ValueError("text_area_func must return a np.array of coordinates. Returned: {}".format(type(self.text_area)))
             elif self.text_area.shape[1] != 4:
@@ -87,6 +88,36 @@ class ImageHandler(object):
     
     def set_text_area_function(self, func):
         self.text_area_func = func
+    
+    def keep_bigger_intersected_text_area(self):
+        """
+        From those text areas that are intersected with each other, keep the biggest one.
+        """
+        if not hasattr(self, 'text_area'):
+            raise ValueError("Text area has not been set. Please set it before calling this method.")
+        
+        if self.text_area.shape[0] == 0:
+            return np.array([])
+
+        kept_text_areas = []
+        for i in range(self.text_area.shape[0]):
+            x1, y1, w1, h1 = self.text_area[i]
+            area1 = w1 * h1
+            for j in range(i + 1, self.text_area.shape[0]):
+                x2, y2, w2, h2 = self.text_area[j]
+                area2 = w2 * h2
+                if (x1 < x2 + w2 and x1 + w1 > x2 and y1 < y2 + h2 and y1 + h1 > y2):
+                    # They intersect
+                    if area1 >= area2:
+                        kept_text_areas.append(self.text_area[i])
+                    else:
+                        kept_text_areas.append(self.text_area[j])
+                    break
+            else:
+                kept_text_areas.append(self.text_area[i])
+
+        return np.array(kept_text_areas)
+
 
     def add_text_to_regions_with_word_boxes(self):
         if not hasattr(self, 'texts') or not isinstance(self.texts, np.ndarray):
