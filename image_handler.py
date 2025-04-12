@@ -202,16 +202,25 @@ class ImageHandler(object):
         Returns:
             np.ndarray: Image with text added to the regions.
         """
+        image_copy = self.image.copy()
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        thickness = np.random.randint(2, 10)
+        space = np.random.randint(5, 20)
+        if hasattr(self, 'generate_text_func'):
+            if not callable(self.generate_text_func):
+                raise ValueError("generate_text_func must be a callable function.")
+            for box in self.text_area:
+                x, y, w, h = box
+                _, word_height = cv2.getTextSize("Test", font, 1, thickness)[0]
+                
+                
         if not hasattr(self, 'texts') or not isinstance(self.texts, np.ndarray):
             raise ValueError("Texts must be a numpy array, set before adding them to the image.")
 
         if self.texts.shape[0] != self.text_area.shape[0]:
             raise ValueError("Number of text regions must match the number of detected text areas.")
 
-        image_copy = self.image.copy()
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        thickness = np.random.randint(2, 10)
-        space = np.random.randint(5, 20)
+        
 
         for i, box in enumerate(self.text_area):
             x, y, w, h = box
@@ -273,7 +282,7 @@ if __name__ == "__main__":
         return np.array(white_regions)
 
     text_obj = TextHandler()
-    image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 5}, text)
+    image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 5}, generate_text_func=text_obj.get_text)
     image_obj.keep_the_bigger_intersected_area()
     from text_handler import TextHandler
     
