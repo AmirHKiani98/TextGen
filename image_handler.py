@@ -152,8 +152,8 @@ class ImageHandler(object):
 
         image_copy = self.image.copy()
         font = cv2.FONT_HERSHEY_SIMPLEX
-        thickness = 2
-        space = 10
+        thickness = np.random.randint(2, 10)
+        space = np.random.randint(5, 20)
 
         for i, box in enumerate(self.text_area):
             x, y, w, h = box
@@ -183,8 +183,7 @@ class ImageHandler(object):
 
             for word in words:
                 (word_width, word_height) = cv2.getTextSize(word, font, best_scale, thickness)[0]
-                top_left = (current_x, current_y - word_height)
-                bottom_right = (current_x + word_width, current_y)
+                
                 if current_x + word_width > x + w:
                     # Go to next line
                     current_x = x
@@ -192,12 +191,15 @@ class ImageHandler(object):
 
                     if current_y + word_height > y + h:
                         break  # no more space in box
-
+                y_space = 50
+                x_space = 10
+                top_left = (current_x - x_space, current_y - (word_height + y_space))
+                bottom_right = (current_x + word_width + x_space, current_y + y_space)
                 cv2.putText(image_copy, word, (current_x, current_y),
                             font, best_scale, (0, 0, 0), thickness, cv2.LINE_AA)
                 
                 cv2.rectangle(image_copy, top_left, bottom_right
-                            , (0, 0, 255), 1)
+                            , (0, 0, 255), 20)
 
                 current_x += word_width + space
 
