@@ -23,7 +23,7 @@ for query in queries:
     
     # Print all image URLs
     # Create directory if it doesn't exist
-    os.makedirs('./v3/pexel_background_images', exist_ok=True)
+    os.makedirs('./images', exist_ok=True)
     for idx, photo in enumerate(data["photos"]):
         i += 1
         image_url = photo["src"]["large"]

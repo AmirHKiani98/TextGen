@@ -2,7 +2,6 @@
 from datasets import load_dataset
 import pandas as pd
 import numpy as np
-np.random.seed(42)  # Set a random seed for reproducibility
 class TextHandler():
     def __init__(self, hf_dataset="Maximax67/English-Valid-Words", config_name="sorted_by_frequency", version="0.1.0"):
         self.hf_dataset = load_dataset(hf_dataset, config_name)

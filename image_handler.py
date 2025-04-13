@@ -3,8 +3,6 @@ import numpy as np
 import os
 
 IMAGE_DEBUG = False
-np.random.seed(42)
-
 class ImageHandler:
     """
     A class to handle image processing tasks, including loading images, detecting text areas,
@@ -126,12 +124,16 @@ class ImageHandler:
         """
         Adds text to the detected text areas in the image.
         """
-        if not hasattr(self, 'texts') or not isinstance(self.texts, np.ndarray):
-            raise ValueError("Texts must be a numpy array, set before adding them to the image.")
-        if self.texts.shape[0] != self.text_area.shape[0]:
-            raise ValueError("Number of text regions must match the number of detected text areas.")
+        if not hasattr(self, 'texts') and not hasattr(self, 'generate_text_func'):
+            raise ValueError("Either texts or generate_text_func must be set before adding text to regions.")
+        if hasattr(self, 'texts') and not isinstance(self.texts, np.ndarray):
+            raise ValueError("texts must be a numpy array.")
+        if hasattr(self, 'texts'):
+            if self.texts.shape[0] != self.text_area.shape[0]:
+                raise ValueError("Number of text regions must match the number of detected text areas.")
 
-        image_copy = self.image.copy()
+        self.image_with_rect = self.image.copy()
+        self.image_without_rect = self.image.copy()
         font, thickness, space = cv2.FONT_HERSHEY_SIMPLEX, np.random.randint(2, 10), np.random.randint(5, 20)
 
         for i, box in enumerate(self.text_area):
@@ -139,18 +141,18 @@ class ImageHandler:
             current_y = box_y
             best_scale = self._find_best_scale(h, font, thickness)
             if not hasattr(self, 'generate_text_func'):
-                self._add_text_to_box(image_copy, box, current_y, best_scale, font, thickness, space, self.texts[i])
+                self._add_text_to_box(image_with_rect, box, current_y, best_scale, font, thickness, space, self.texts[i])
             else:
                 out_of_bounds = False
                 while not out_of_bounds:
                     text = self.generate_text_func(np.random.randint(2, 10))
-                    current_y = self._add_text_to_box(image_copy, box, current_y, best_scale, font, thickness, space, text)
+                    current_y = self._add_text_to_box(image_with_rect, box, current_y, best_scale, font, thickness, space, text)
                     if current_y + space > box_y + h:
                         out_of_bounds = True
                         break
                     
 
-        return image_copy
+        return self.image_with_rect, self.image_without_rect
 
     def _find_best_scale(self, box_height, font, thickness):
         for scale in np.linspace(0.1, 5.0, num=100)[::-1]:
@@ -181,7 +183,13 @@ class ImageHandler:
             self.word_boxes.append((top_left, bottom_right))
             current_x += word_width + space
         return current_y
-
+    def show_image(self, img, title="Image"):
+        """
+        Displays the image using OpenCV.
+        """
+        cv2.imshow(title, img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 if __name__ == "__main__":
     image_path = "test/images/pexels-karolina-grabowska-4032977.jpg"
 
@@ -199,9 +207,7 @@ if __name__ == "__main__":
     text_obj = TextHandler(hf_dataset="Maximax67/English-Valid-Words", config_name="sorted_by_frequency", version="0.1.0")
     image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 5}, generate_text_func=text_obj.get_text)
 
-    num_boxes = image_obj.get_num_boxes()
-    texts = text_obj.generate_text_list(num_boxes, upper_bound_words=10)
-    image_obj.set_texts(texts)
+    
     image_with_text = image_obj.add_text_to_regions()
 
     for box in image_obj.text_area:
