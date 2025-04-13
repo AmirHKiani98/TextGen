@@ -86,7 +86,7 @@ def main(text_obj):
         print(f"Starting {image_path}")
         args_list = [(image_path, text_obj) for _ in range(simulation_number)]
 
-        with Pool(int(cpu_count() / 2)) as pool:
+        with Pool(cpu_count()) as pool:
             for _ in tqdm(pool.imap_unordered(process_image, args_list), total=len(args_list), desc="Processing images"):
                 pass
 
