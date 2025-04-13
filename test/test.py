@@ -5,15 +5,18 @@ from pathlib import Path
 from tqdm import tqdm
 import os
 import json
-# Add the parent directory to the system path
-parent_dir = Path(__file__).resolve().parent.parent
-sys.path.append(str(parent_dir))
-from textgen_class import TextGen
-from text_handler import TextHandler
-from image_handler import ImageHandler
 from glob import glob
 from random import shuffle
 from multiprocessing import Pool, cpu_count
+
+# Add the parent directory to the system path
+parent_dir = Path(__file__).resolve().parent.parent
+sys.path.append(str(parent_dir))
+
+from textgen_class import TextGen
+from text_handler import TextHandler
+from image_handler import ImageHandler
+
 random_string = lambda x: "".join([chr(np.random.randint(97, 123)) for _ in range(x)])
 
 def find_white_regions(img, white_threshold=200, top_n=5):
@@ -24,9 +27,8 @@ def find_white_regions(img, white_threshold=200, top_n=5):
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) == 0:
-        return np.array([[0,0, w, h]])
+        return np.array([[0, 0, w, h]])
     contours_sorted = sorted(contours, key=cv2.contourArea, reverse=True)[:top_n]
-
     return np.array([cv2.boundingRect(cnt) for cnt in contours_sorted])
 
 def convert_to_python_types(obj):
@@ -45,40 +47,50 @@ def convert_to_python_types(obj):
     else:
         return obj
 
-
-def process_image(image_path, text_obj):
-    image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 1}, generate_text_func=text_obj.get_text)
-    image_with_rect, image_without_rect = image_obj.add_text_to_regions()
-    words, word_boxes = image_obj.words, image_obj.word_boxes
-    name = random_string(100)
-    while os.path.isfile(f"./output/annotations/{name}.txt"):
+def process_image(args):
+    image_path, text_obj = args
+    try:
+        image_obj = ImageHandler(
+            image_path=image_path,
+            text_area_func=find_white_regions,
+            text_area_func_args={"white_threshold": 200, "top_n": 1},
+            generate_text_func=text_obj.get_text,
+        )
+        image_with_rect, image_without_rect = image_obj.add_text_to_regions()
+        words, word_boxes = image_obj.words, image_obj.word_boxes
         name = random_string(100)
-    
-    with open(f"./output/annotations/{name}.json", "w") as f:
-        data = {
-            "words": words,
-            "word_boxes": word_boxes,
-            "image_path": image_path
-        }
-        json.dump(convert_to_python_types(data), f)
-    cv2.imwrite(f"./output/images/{name}.jpg", image_without_rect)
+        while os.path.isfile(f"./output/annotations/{name}.json"):
+            name = random_string(100)
+
+        with open(f"./output/annotations/{name}.json", "w") as f:
+            data = {
+                "words": words,
+                "word_boxes": word_boxes,
+                "image_path": image_path,
+            }
+            json.dump(convert_to_python_types(data), f)
+
+        cv2.imwrite(f"./output/images/{name}.jpg", image_without_rect)
+    except Exception as e:
+        print(f"Failed processing {image_path}: {e}")
 
 def main(text_obj):
     files = glob("./images/*.jpg")
-    # os.makedirs("./output/", exist_ok=True)
     os.makedirs("./output/images", exist_ok=True)
     os.makedirs("./output/annotations", exist_ok=True)
-    simulation_number = 1_000_000
+
+    simulation_number = 100_000  # or 1_000_000 — reduce while testing
     shuffle(files)
+
     for image_path in files:
-        print(f"starting {image_path}")
+        print(f"Starting {image_path}")
         args_list = [(image_path, text_obj) for _ in range(simulation_number)]
-        print(f"processing {len(args_list)} images")
-        with Pool(int(cpu_count()/2)) as pool:
-            tqdm(pool.starmap(process_image, args_list), total=len(args_list), desc="Processing images", unit="image")
-        print(f"finished {image_path}")
-        
-        
+
+        with Pool(int(cpu_count() / 2)) as pool:
+            for _ in tqdm(pool.imap_unordered(process_image, args_list), total=len(args_list), desc="Processing images"):
+                pass
+
+        print(f"Finished {image_path}")
 
 if __name__ == "__main__":
     text_obj = TextHandler(hf_dataset="Maximax67/English-Valid-Words", config_name="sorted_by_frequency", version="0.1.0")
