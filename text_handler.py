@@ -21,7 +21,7 @@ class TextHandler():
         self.df["possiblity"] = self.df["Frequency count"].apply(lambda x: x / summation)
 
             
-    def get_text(self, number_of_words=1):
+    def get_text(self, number_of_words=1, possiblity_df=True):
         """
         Get a random text from the database.
         Args:
@@ -29,10 +29,15 @@ class TextHandler():
         Returns:
             str: A random text from the database.
         """
-        if number_of_words > 1:
-            return " ".join(self.df.sample(number_of_words, weights=self.df["possiblity"])["Word"])
+        if possiblity_df:
+            possiblity = self.df["possiblity"].values
         else:
-            return self.df.sample(1, weights=self.df["possiblity"])["Word"].values[0]
+            possiblity = None
+        if number_of_words > 1:
+            
+            return " ".join(self.df.sample(number_of_words, weights=possiblity))
+        else:
+            return self.df.sample(1, weights=possiblity).values[0]
     
     def generate_text_list(self, number_of_items=10, upper_bound_words=10):
         """

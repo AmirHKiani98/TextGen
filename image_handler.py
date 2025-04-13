@@ -141,12 +141,12 @@ class ImageHandler:
             current_y = box_y
             best_scale = self._find_best_scale(h, font, thickness)
             if not hasattr(self, 'generate_text_func'):
-                self._add_text_to_box(image_with_rect, box, current_y, best_scale, font, thickness, space, self.texts[i])
+                self._add_text_to_box(box, current_y, best_scale, font, thickness, space, self.texts[i])
             else:
                 out_of_bounds = False
                 while not out_of_bounds:
                     text = self.generate_text_func(np.random.randint(2, 10))
-                    current_y = self._add_text_to_box(image_with_rect, box, current_y, best_scale, font, thickness, space, text)
+                    current_y = self._add_text_to_box(box, current_y, best_scale, font, thickness, space, text)
                     if current_y + space > box_y + h:
                         out_of_bounds = True
                         break
@@ -161,12 +161,12 @@ class ImageHandler:
                 return scale
         return 1.0
 
-    def _add_text_to_box(self, image, box, sentence_y, scale, font, thickness, space, text):
+    def _add_text_to_box(self, box, sentence_y, scale, font, thickness, space, text):
         x, y, w, h = box
         current_x = x
         line_height = cv2.getTextSize("Test", font, scale, thickness)[0][1] + space
         current_y = sentence_y + line_height
-
+        
         words = text.split()
         for word in words:
             word_size, baseline = cv2.getTextSize(word, font, scale, thickness)
@@ -176,9 +176,10 @@ class ImageHandler:
                 current_y += line_height
                 if current_y + word_height > y + h:
                     break
-            cv2.putText(image, word, (current_x, current_y), font, scale, (0, 0, 0), thickness, cv2.LINE_AA)
+            cv2.putText(self.image_without_rect, word, (current_x, current_y), font, scale, (0, 0, 0), thickness, cv2.LINE_AA)
+            cv2.putText(self.image_with_rect, word, (current_x, current_y), font, scale, (0, 0, 0), thickness, cv2.LINE_AA)
             top_left, bottom_right = (current_x, current_y - word_height), (current_x + word_width, current_y)
-            cv2.rectangle(image, top_left, bottom_right, (0, 0, 255), 10)
+            cv2.rectangle(self.image_with_rect, top_left, bottom_right, (0, 0, 255), 10)
             self.words.append(word)
             self.word_boxes.append((top_left, bottom_right))
             current_x += word_width + space
