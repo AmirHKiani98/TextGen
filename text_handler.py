@@ -13,11 +13,15 @@ class TextHandler():
 
     def load_df_english_valid_words(self):
         """
-        Load the text database.
+        Load and clean the text database.
         """
-        # Use the already loaded dataset from self.hf_dataset
         self.df = pd.DataFrame(self.hf_dataset['train'])
         self.df = self.df.drop(columns=['Stem', 'Stem valid probability'])
+
+        # Remove invalid entries
+        self.df = self.df[self.df["Word"].notna()]                 # remove None
+        self.df = self.df[self.df["Word"].apply(lambda x: isinstance(x, str) and x.strip() != "")]  # remove blanks
+
         summation = self.df["Frequency count"].sum()
         self.df["possiblity"] = self.df["Frequency count"].apply(lambda x: x / summation)
         self.words = self.df["Word"].values

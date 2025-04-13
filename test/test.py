@@ -13,6 +13,7 @@ from text_handler import TextHandler
 from image_handler import ImageHandler
 from glob import glob
 from random import shuffle
+from multiprocessing import Pool, cpu_count
 random_string = lambda x: "".join([chr(np.random.randint(97, 123)) for _ in range(x)])
 
 def find_white_regions(img, white_threshold=200, top_n=5):
@@ -45,6 +46,23 @@ def convert_to_python_types(obj):
         return obj
 
 
+def process_image(image_path, text_obj):
+    image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 1}, generate_text_func=text_obj.get_text)
+    image_with_rect, image_without_rect = image_obj.add_text_to_regions()
+    words, word_boxes = image_obj.words, image_obj.word_boxes
+    name = random_string(100)
+    while os.path.isfile(f"./output/annotations/{name}.txt"):
+        name = random_string(100)
+    
+    with open(f"./output/annotations/{name}.json", "w") as f:
+        data = {
+            "words": words,
+            "word_boxes": word_boxes,
+            "image_path": image_path
+        }
+        json.dump(convert_to_python_types(data), f)
+    cv2.imwrite(f"./output/images/{name}.jpg", image_without_rect)
+
 def main(text_obj):
     files = glob("./images/*.jpg")
     # os.makedirs("./output/", exist_ok=True)
@@ -53,22 +71,12 @@ def main(text_obj):
     simulation_number = 1_000_000
     shuffle(files)
     for image_path in files:
-        for _ in tqdm(range(simulation_number), total=simulation_number, desc=f"Processing images {image_path}", unit="image"):
-            image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 1}, generate_text_func=text_obj.get_text)
-            image_with_rect, image_without_rect = image_obj.add_text_to_regions()
-            words, word_boxes = image_obj.words, image_obj.word_boxes
-            name = random_string(100)
-            while os.path.isfile(f"./output/annotations/{name}.txt"):
-                name = random_string(100)
-            
-            with open(f"./output/annotations/{name}.json", "w") as f:
-                data = {
-                    "words": words,
-                    "word_boxes": word_boxes,
-                    "image_path": image_path
-                }
-                json.dump(convert_to_python_types(data), f)
-            cv2.imwrite(f"./output/images/{name}.jpg", image_without_rect)
+        print(f"starting {image_path}")
+        args_list = [(image_path, text_obj) for _ in range(simulation_number)]
+        print(f"processing {len(args_list)} images")
+        with Pool(int(cpu_count()/2)) as pool:
+            tqdm(pool.starmap(process_image, args_list), total=len(args_list), desc="Processing images", unit="image")
+        print(f"finished {image_path}")
         
         
 
