@@ -166,7 +166,7 @@ class ImageHandler:
         current_x = x
         line_height = cv2.getTextSize("Test", font, scale, thickness)[0][1] + space
         current_y = sentence_y + line_height
-        
+
         words = text.split()
         for word in words:
             word_size, baseline = cv2.getTextSize(word, font, scale, thickness)
