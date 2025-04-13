@@ -2,6 +2,7 @@
 from datasets import load_dataset
 import pandas as pd
 import numpy as np
+import random
 class TextHandler():
     def __init__(self, hf_dataset="Maximax67/English-Valid-Words", config_name="sorted_by_frequency", version="0.1.0"):
         self.hf_dataset = load_dataset(hf_dataset, config_name)
@@ -19,6 +20,7 @@ class TextHandler():
         self.df = self.df.drop(columns=['Stem', 'Stem valid probability'])
         summation = self.df["Frequency count"].sum()
         self.df["possiblity"] = self.df["Frequency count"].apply(lambda x: x / summation)
+        self.words = self.df["Word"].values
 
             
     def get_text(self, number_of_words=1, possiblity_df=False):
@@ -29,14 +31,7 @@ class TextHandler():
         Returns:
             str: A random text from the database.
         """
-        if possiblity_df:
-            possiblity = self.df["possiblity"].values
-        else:
-            possiblity = None
-        if number_of_words > 1:
-            return " ".join(self.df.sample(number_of_words, weights=possiblity))
-        else:
-            return self.df.sample(1, weights=possiblity).values[0]
+        return " ".join(random.choices(self.words, k=number_of_words))
     
     def generate_text_list(self, number_of_items=10, upper_bound_words=10):
         """

@@ -2,7 +2,9 @@ import sys
 import cv2
 import numpy as np
 from pathlib import Path
-
+from tqdm import tqdm
+import os
+import json
 # Add the parent directory to the system path
 parent_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(parent_dir))
@@ -10,6 +12,8 @@ from textgen_class import TextGen
 from text_handler import TextHandler
 from image_handler import ImageHandler
 from glob import glob
+from random import shuffle
+random_string = lambda x: "".join([chr(np.random.randint(97, 123)) for _ in range(x)])
 
 def find_white_regions(img, white_threshold=200, top_n=5):
     w, h = img.shape[1], img.shape[0]
@@ -24,14 +28,48 @@ def find_white_regions(img, white_threshold=200, top_n=5):
 
     return np.array([cv2.boundingRect(cnt) for cnt in contours_sorted])
 
+def convert_to_python_types(obj):
+    if isinstance(obj, dict):
+        return {k: convert_to_python_types(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_to_python_types(v) for v in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_to_python_types(v) for v in obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    else:
+        return obj
 
 
 def main(text_obj):
-    
-    for image_path in glob("./images/*.jpg"):
-        image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 1}, generate_text_func=text_obj.get_text)
-        image_with_rect, image_without_rect = image_obj.add_text_to_regions()
-        # image_obj.show_image(image_without_rect, title="Image with Text")
+    files = glob("./images/*.jpg")
+    # os.makedirs("./output/", exist_ok=True)
+    os.makedirs("./output/images", exist_ok=True)
+    os.makedirs("./output/annotations", exist_ok=True)
+    simulation_number = 1_000_000
+    shuffle(files)
+    for image_path in files:
+        for _ in tqdm(range(simulation_number), total=simulation_number, desc=f"Processing images {image_path}", unit="image"):
+            image_obj = ImageHandler(image_path=image_path, text_area_func=find_white_regions, text_area_func_args={"white_threshold": 200, "top_n": 1}, generate_text_func=text_obj.get_text)
+            image_with_rect, image_without_rect = image_obj.add_text_to_regions()
+            words, word_boxes = image_obj.words, image_obj.word_boxes
+            name = random_string(100)
+            while os.path.isfile(f"./output/annotations/{name}.txt"):
+                name = random_string(100)
+            
+            with open(f"./output/annotations/{name}.json", "w") as f:
+                data = {
+                    "words": words,
+                    "word_boxes": word_boxes,
+                    "image_path": image_path
+                }
+                json.dump(convert_to_python_types(data), f)
+            cv2.imwrite(f"./output/images/{name}.jpg", image_without_rect)
+        
         
 
 if __name__ == "__main__":

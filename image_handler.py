@@ -134,12 +134,13 @@ class ImageHandler:
 
         self.image_with_rect = self.image.copy()
         self.image_without_rect = self.image.copy()
-        font, thickness, space = cv2.FONT_HERSHEY_SIMPLEX, np.random.randint(2, 10), np.random.randint(5, 20)
+        font, thickness, space = cv2.FONT_HERSHEY_SIMPLEX, np.random.randint(2, 5), np.random.randint(5, 20)
 
         for i, box in enumerate(self.text_area):
             x, box_y, w, h = box
             current_y = box_y
             best_scale = self._find_best_scale(h, font, thickness)
+            
             if not hasattr(self, 'generate_text_func'):
                 self._add_text_to_box(box, current_y, best_scale, font, thickness, space, self.texts[i])
             else:
@@ -155,7 +156,7 @@ class ImageHandler:
         return self.image_with_rect, self.image_without_rect
 
     def _find_best_scale(self, box_height, font, thickness):
-        for scale in np.linspace(0.1, 5.0, num=100)[::-1]:
+        for scale in np.linspace(0.1, 1, num=100)[::-1]:
             _, word_height = cv2.getTextSize("Test", font, scale, thickness)[0]
             if box_height // (word_height + 5) > 0:
                 return scale
